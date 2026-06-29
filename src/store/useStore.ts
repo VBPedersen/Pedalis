@@ -23,8 +23,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         hotkey: "1",
     },
     {
-        id: "od",
-        label: "Drive",
+        id: "filter",
+        label: "ANTELOPE",
         color: "bg-orange-500",
         // Assign next: MIDI Learn → cc: 1
         midiMessages: [{ type: "cc", channel: 0, cc: 1, value: 127 }],
@@ -33,8 +33,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         hotkey: "2",
     },
     {
-        id: "chorus",
-        label: "Chorus",
+        id: "od",
+        label: "HALFMAN",
         color: "bg-sky-500",
         midiMessages: [{ type: "cc", channel: 0, cc: 2, value: 127 }],
         offMessages:  [{ type: "cc", channel: 0, cc: 2, value: 0 }],
@@ -42,8 +42,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         hotkey: "3",
     },
     {
-        id: "delay",
-        label: "Delay",
+        id: "teal",
+        label: "TEALBREAKER",
         color: "bg-violet-500",
         midiMessages: [{ type: "cc", channel: 0, cc: 3, value: 127 }],
         offMessages:  [{ type: "cc", channel: 0, cc: 3, value: 0 }],
@@ -51,8 +51,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         hotkey: "4",
     },
     {
-        id: "reverb",
-        label: "Reverb",
+        id: "delay",
+        label: "DELAY",
         color: "bg-emerald-500",
         midiMessages: [{ type: "cc", channel: 0, cc: 4, value: 127 }],
         offMessages:  [{ type: "cc", channel: 0, cc: 4, value: 0 }],
