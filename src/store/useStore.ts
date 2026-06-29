@@ -3,15 +3,22 @@ import { invoke } from "@tauri-apps/api/core";
 import type { Stomp, Scene, HardwareStatus, MidiStatus, MidiMessage } from "../types";
 
 // ─── Default Stomps (Neural DSP Archetype: John Mayer layout) ────────────────
-
+//
+// CHANNEL NOTE: Archetype's UI shows channels as 1-16. The MIDI wire protocol
+// uses 0-15. So "Channel 1" in Archetype = channel: 0 here. Always subtract 1
+// from whatever Archetype displays.
+//
+// CC NUMBERS: These must match what Archetype assigned during MIDI Learn.
+// Right-click a pedal in Archetype → MIDI Learn → click the stomp button here.
 
 const DEFAULT_STOMPS: Stomp[] = [
     {
-        id: "comp",
-        label: "Comp",
+        id: "boost",
+        label: "Boost",
         color: "bg-yellow-500",
-        midiMessages: [{ type: "cc", channel: 0, cc: 11, value: 127 }],
-        offMessages: [{ type: "cc", channel: 0, cc: 11, value: 0 }],
+        // Archetype: CC #0, Channel 1 → channel: 0 here
+        midiMessages: [{ type: "cc", channel: 0, cc: 0, value: 127 }],
+        offMessages:  [{ type: "cc", channel: 0, cc: 0, value: 0 }],
         isActive: false,
         hotkey: "1",
     },
@@ -19,8 +26,9 @@ const DEFAULT_STOMPS: Stomp[] = [
         id: "od",
         label: "Drive",
         color: "bg-orange-500",
-        midiMessages: [{ type: "cc", channel: 0, cc: 12, value: 127 }],
-        offMessages: [{ type: "cc", channel: 0, cc: 12, value: 0 }],
+        // Assign next: MIDI Learn → cc: 1
+        midiMessages: [{ type: "cc", channel: 0, cc: 1, value: 127 }],
+        offMessages:  [{ type: "cc", channel: 0, cc: 1, value: 0 }],
         isActive: false,
         hotkey: "2",
     },
@@ -28,8 +36,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         id: "chorus",
         label: "Chorus",
         color: "bg-sky-500",
-        midiMessages: [{ type: "cc", channel: 0, cc: 13, value: 127 }],
-        offMessages: [{ type: "cc", channel: 0, cc: 13, value: 0 }],
+        midiMessages: [{ type: "cc", channel: 0, cc: 2, value: 127 }],
+        offMessages:  [{ type: "cc", channel: 0, cc: 2, value: 0 }],
         isActive: false,
         hotkey: "3",
     },
@@ -37,8 +45,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         id: "delay",
         label: "Delay",
         color: "bg-violet-500",
-        midiMessages: [{ type: "cc", channel: 0, cc: 14, value: 127 }],
-        offMessages: [{ type: "cc", channel: 0, cc: 14, value: 0 }],
+        midiMessages: [{ type: "cc", channel: 0, cc: 3, value: 127 }],
+        offMessages:  [{ type: "cc", channel: 0, cc: 3, value: 0 }],
         isActive: false,
         hotkey: "4",
     },
@@ -46,8 +54,8 @@ const DEFAULT_STOMPS: Stomp[] = [
         id: "reverb",
         label: "Reverb",
         color: "bg-emerald-500",
-        midiMessages: [{ type: "cc", channel: 0, cc: 15, value: 127 }],
-        offMessages: [{ type: "cc", channel: 0, cc: 15, value: 0 }],
+        midiMessages: [{ type: "cc", channel: 0, cc: 4, value: 127 }],
+        offMessages:  [{ type: "cc", channel: 0, cc: 4, value: 0 }],
         isActive: false,
         hotkey: "5",
     },
@@ -76,7 +84,6 @@ const DEFAULT_SCENES: Scene[] = [
         hotkey: "F3",
     },
 ];
-
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -137,7 +144,7 @@ export const useStore = create<StoreState>((set, get) => ({
         const messages = willBeActive
             ? stomp.midiMessages
             : stomp.offMessages ?? stomp.midiMessages.map((m) => ({ ...m, value: 0 }));
-
+        console.log(messages);
         sendMessages(messages, midiChannel);
 
         set((state) => ({
