@@ -1,2 +1,7 @@
-# Pedalis
-Virtual Stomp/Pedal box for controlling/toggling pedals in Guitar Amp plugins like Neural DSP's Archetype plugins via MIDI with simple shortcuts and custom USB connected device
+# Tauri + React + Typescript
+
+This template should help get you started developing with Tauri, React and Typescript in Vite.
+
+## Recommended IDE Setup
+
+- [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
