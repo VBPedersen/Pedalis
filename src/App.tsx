@@ -63,7 +63,7 @@ export default function App() {
         <header className="flex items-center gap-3 px-6 py-4 border-b border-zinc-800">
           <Guitar size={20} className="text-orange-400" />
           <h1 className="text-sm font-bold tracking-[0.2em] uppercase text-zinc-200">
-            StompRoute
+            Pedalis
           </h1>
           <span className="text-[10px] text-zinc-600 font-mono ml-1">v0.2</span>
         </header>
