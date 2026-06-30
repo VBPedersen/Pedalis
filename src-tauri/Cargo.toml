@@ -1,8 +1,8 @@
 [package]
 name = "pedalis"
-version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.2.0"
+description = "Virtual Stomp Box for MIDI plugin control"
+authors = ["VBPedersen"]
 edition = "2021"
 
 [build-dependencies]

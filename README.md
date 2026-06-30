@@ -2,6 +2,8 @@
 
 # 🎸 Pedalis
 
+<img src="app-icon.svg" alt="Pedalis Logo" width="250" />
+
 **A software-first virtual pedalboard for controlling guitar plugins over MIDI — with optional cheap USB foot controller support.**
 
 Built with Tauri (Rust) + React + TypeScript. No DAW required. No expensive MIDI controller required.
