@@ -1,28 +1,63 @@
+import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useStore } from "../store/useStore";
-import { Usb, Music, ChevronDown, Check } from "lucide-react";
-import {useEffect, useState} from "react";
+import { Usb, Music, ChevronDown, Check, RefreshCw, AlertCircle } from "lucide-react";
 
 export const ConnectionPanel: React.FC = () => {
     const [midiPorts, setMidiPorts] = useState<string[]>([]);
     const [serialPorts, setSerialPorts] = useState<string[]>([]);
+    const [midiError, setMidiError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
     const { midi, hardware, setMidiConnected, setHardwareConnected, fireHardwareStomp } =
         useStore();
 
+    //  Track the current rotation degree counter
+    const [spinDeg, setSpinDeg] = useState(0);
+
+    const loadPorts = async () => {
+        setRefreshing(true);
+        setMidiError(null);
+
+        // Instantly spin the icon 360 degrees forward on click
+        setSpinDeg(prev => prev + 360);
+
+        await Promise.all([
+            (async () => {
+                try {
+                    const ports = await invoke<string[]>("list_midi_ports");
+                    setMidiPorts(ports);
+                    if (ports.length === 0) {
+                        setMidiError("No MIDI ports found. Is loopMIDI running?");
+                    }
+                } catch (e) {
+                    setMidiError(String(e));
+                }
+            })(),
+            (async () => {
+                try {
+                    const ports = await invoke<string[]>("list_serial_ports");
+                    setSerialPorts(ports);
+                } catch (e) {
+                    console.error("Failed to list serial ports:", e);
+                }
+            })()
+        ]);
+
+        setRefreshing(false);
+    };
+
     useEffect(() => {
-        // Load available ports
-        invoke<string[]>("list_midi_ports").then(setMidiPorts).catch(console.error);
-        invoke<string[]>("list_serial_ports").then(setSerialPorts).catch(console.error);
+        // Initial silent load without triggering a wild visual spin on app start
+        invoke<string[]>("list_midi_ports").then(setMidiPorts).catch(() => {});
+        invoke<string[]>("list_serial_ports").then(setSerialPorts).catch(() => {});
     }, []);
 
     useEffect(() => {
-        // Listen for hardware stomp events from Rust serial listener
         const unlisten = listen<number>("hardware-stomp", (event) => {
             fireHardwareStomp(event.payload);
         });
 
-        // Listen for expression pedal — stored globally for CC routing
         const unlistenExp = listen<number>("hardware-exp", (event) => {
             invoke("send_midi_cc", { channel: 0, cc: 11, value: event.payload }).catch(
                 console.error
@@ -62,7 +97,22 @@ export const ConnectionPanel: React.FC = () => {
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">
                         MIDI Output
                     </p>
-                    {midi.connected && <Check size={12} className="text-emerald-400 ml-auto" />}
+                    <button
+                        onClick={loadPorts}
+                        disabled={refreshing}
+                        title="Refresh ports"
+                        className="ml-auto text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                    >
+                        {/*  Explicitly driving rotation strictly by inline style transitions */}
+                        <RefreshCw
+                            size={11}
+                            style={{ transform: `rotate(${spinDeg}deg)` }}
+                            className={`transform will-change-transform transition-transform duration-700 ease-in-out ${
+                                refreshing ? "text-emerald-400" : ""
+                            }`}
+                        />
+                    </button>
+                    {midi.connected && <Check size={12} className="text-emerald-400" />}
                 </div>
                 <div className="relative">
                     <select
@@ -81,10 +131,13 @@ export const ConnectionPanel: React.FC = () => {
                     </select>
                     <ChevronDown size={12} className="absolute right-2 top-2.5 text-zinc-500 pointer-events-none" />
                 </div>
-                {midi.connected && (
-                    <p className="text-[10px] text-emerald-400 mt-1">
-                        ● {midi.portName}
+                {midiError && !midi.connected && (
+                    <p className="text-[10px] text-amber-400 mt-1 flex items-center gap-1">
+                        <AlertCircle size={10} /> {midiError}
                     </p>
+                )}
+                {midi.connected && (
+                    <p className="text-[10px] text-emerald-400 mt-1">● {midi.portName}</p>
                 )}
             </div>
 
