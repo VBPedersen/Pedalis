@@ -1,3 +1,10 @@
+
+export type Profile = {
+    name: string;
+    stomps: Stomp[];
+    scenes: Scene[];
+};
+
 export type MidiMessage = {
     type: "cc" | "pc";
     channel: number; // 0-15

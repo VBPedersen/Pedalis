@@ -155,6 +155,8 @@ fn connect_serial_port(
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_fs::init())
         .manage(MidiState(Arc::new(Mutex::new(None))))
         .invoke_handler(tauri::generate_handler![
             list_midi_ports,

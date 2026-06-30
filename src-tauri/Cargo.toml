@@ -15,6 +15,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 midir = "0.11.0"
 serialport = "4.9.0"
+tauri-plugin-fs = "2.5.1"
 
 [features]
 # This is the feature configuration for Tauri
