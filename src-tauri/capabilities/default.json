@@ -11,6 +11,8 @@
     "opener:default",
     "fs:default",
     "fs:allow-remove",
+    "fs:allow-write-text-file",
+    "fs:allow-appdata-write-recursive",
     {
       "identifier": "fs:scope",
       "allow": [

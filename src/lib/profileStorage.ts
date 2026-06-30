@@ -5,21 +5,30 @@ import {
     mkdir,
     exists,
     remove,
+    BaseDirectory
 } from "@tauri-apps/plugin-fs";
-import { BaseDirectory } from "@tauri-apps/api/path";
+import { join } from "@tauri-apps/api/path";
 import type { Profile } from "../types";
 
 const PROFILES_DIR = "profiles"; // relative to $APPDATA
 const LAST_PROFILE_KEY_FILE = "last_profile.json";
 
-function fileNameFor(profileName: string): string {
+function getProfileFileName(profileName: string): string {
     // Sanitize to a safe filename
     const safe = profileName.trim().replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_");
-    return `${PROFILES_DIR}/${safe || "untitled"}.json`;
+    return `${safe || "untitled"}.json`;
 }
 
 async function ensureProfilesDir() {
     try {
+        // Force check/create the base container folder (AppData/Roaming/pedalis)
+        // Passing "." tells Tauri to target the root of your AppData config directory
+        const rootExists = await exists(".", { baseDir: BaseDirectory.AppData });
+        if (!rootExists) {
+            await mkdir(".", { baseDir: BaseDirectory.AppData, recursive: true });
+        }
+
+        // Now that the parent directory exists, create the "profiles" subdirectory
         const dirExists = await exists(PROFILES_DIR, { baseDir: BaseDirectory.AppData });
         if (!dirExists) {
             await mkdir(PROFILES_DIR, { baseDir: BaseDirectory.AppData, recursive: true });
@@ -46,19 +55,24 @@ export async function listProfiles(): Promise<string[]> {
 /** Save a profile to disk as JSON. */
 export async function saveProfile(profile: Profile): Promise<void> {
     await ensureProfilesDir();
-    const path = fileNameFor(profile.name);
     try {
-        await writeTextFile(path, JSON.stringify(profile, null, 2), {
+        // Use join() to cleanly append paths with proper OS separators
+        const file = getProfileFileName(profile.name);
+        const targetPath = await join(PROFILES_DIR, file);
+
+        await writeTextFile(targetPath, JSON.stringify(profile, null, 2), {
             baseDir: BaseDirectory.AppData,
         });
     } catch (e) {
+        alert(e)
         console.error("saveProfile failed:", e);
+        throw e;
     }
 }
 
 /** Load a profile by name from disk. */
 export async function loadProfile(name: string): Promise<Profile | null> {
-    const path = fileNameFor(name);
+    const path = getProfileFileName(name);
     try {
         const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
         if (!fileExists) return null;
@@ -66,13 +80,14 @@ export async function loadProfile(name: string): Promise<Profile | null> {
         return JSON.parse(text) as Profile;
     } catch (e) {
         console.error("loadProfile failed:", e);
+        alert(e)
         return null;
     }
 }
 
 /** Delete a profile file from disk. */
 export async function deleteProfileFile(name: string): Promise<void> {
-    const path = fileNameFor(name);
+    const path = getProfileFileName(name);
     try {
         const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
         if (fileExists) {

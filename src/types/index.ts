@@ -3,6 +3,7 @@ export type Profile = {
     name: string;
     stomps: Stomp[];
     scenes: Scene[];
+    activeSceneId: string | null;
 };
 
 export type MidiMessage = {

@@ -97,6 +97,7 @@ const DEFAULT_PROFILE: Profile = {
     name: DEFAULT_PROFILE_NAME,
     stomps: DEFAULT_STOMPS,
     scenes: DEFAULT_SCENES,
+    activeSceneId: null,
 };
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -327,14 +328,50 @@ export const useStore = create<StoreState>((set, get) => ({
         set({ availableProfiles: names });
     },
 
-    saveCurrentProfile: async (asName) => {
-        const { stomps, scenes, profileName } = get();
-        const name = asName?.trim() || profileName;
-        const profile: Profile = { name, stomps, scenes };
-        await saveProfile(profile);
-        await saveLastProfileName(name);
-        await get().refreshProfileList();
-        set({ profileName: name, profileDirty: false });
+    saveCurrentProfile: async (newName) => {
+        const { stomps, scenes, activeSceneId, profileName } = get();
+
+        // Determine target name
+        const targetName = newName ? newName.trim() : profileName;
+        let profileToSave: Profile;
+
+        if (newName) {
+            // 💡 CRITICAL: User clicked "New"!
+            // Force scenes and stomp pedals to empty arrays for a fresh slate
+            profileToSave = {
+                name: targetName,
+                stomps: [],       // Empty out stomp pedals
+                scenes: [],       // Empty out scenes
+                activeSceneId: null
+            };
+        } else {
+            // Saving the active profile normally: keep active items
+            profileToSave = {
+                name: targetName,
+                stomps,
+                scenes,
+                activeSceneId
+            };
+        }
+
+        try {
+            // Save using our updated file system layer
+            await saveProfile(profileToSave);
+            await saveLastProfileName(targetName);
+
+            // Update local zustand state reactively
+            set({
+                profileName: targetName,
+                profileDirty: false,
+                // If it was a new profile creation, update active viewport array states to clear board
+                ...(newName && { stomps: [], scenes: [], activeSceneId: null })
+            });
+
+            // Refresh dropdown choices
+            await get().refreshProfileList();
+        } catch (error) {
+            console.error("Failed to save profile:", error);
+        }
     },
 
     loadProfileByName: async (name) => {
@@ -371,23 +408,29 @@ export const useStore = create<StoreState>((set, get) => ({
 
     initProfiles: async () => {
         set({ profileLoading: true });
-        await get().refreshProfileList();
-        const { availableProfiles } = get();
-
-        if (availableProfiles.length === 0) {
-            // First run: seed disk with the default profile
-            await saveProfile(DEFAULT_PROFILE);
+        try {
             await get().refreshProfileList();
+            const { availableProfiles } = get();
+
+            if (availableProfiles.length === 0) {
+                // First run: seed disk with the default profile
+                await saveProfile(DEFAULT_PROFILE);
+                await get().refreshProfileList();
+                set({ profileLoading: false });
+                return;
+            }
+
+            const lastProfileName = await loadLastProfileName();
+            const target =
+                lastProfileName && availableProfiles.includes(lastProfileName)
+                    ? lastProfileName
+                    : availableProfiles[0];
+
+            await get().loadProfileByName(target);
+        } catch (error) {
+            console.error("Critical error in initialization loop:", error);
+            // 💡 Fallback safety valve: Unfreeze app layout even if the file failed to write
             set({ profileLoading: false });
-            return;
         }
-
-        const lastProfileName = await loadLastProfileName();
-        const target =
-            lastProfileName && availableProfiles.includes(lastProfileName)
-                ? lastProfileName
-                : availableProfiles[0];
-
-        await get().loadProfileByName(target);
     },
 }));
