@@ -167,6 +167,9 @@ async function sendMessages(messages: MidiMessage[], channel: number) {
     }
 }
 
+const sanitizeName = (name: string) =>
+    name.trim().replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_") || "untitled";
+
 export const useStore = create<StoreState>((set, get) => ({
     stomps: DEFAULT_STOMPS,
     scenes: DEFAULT_SCENES,
@@ -332,11 +335,12 @@ export const useStore = create<StoreState>((set, get) => ({
         const { stomps, scenes, activeSceneId, profileName } = get();
 
         // Determine target name
-        const targetName = newName ? newName.trim() : profileName;
+        const rawTargetName = newName ? newName.trim() : profileName;
+        const targetName = sanitizeName(rawTargetName);
         let profileToSave: Profile;
 
         if (newName) {
-            // 💡 CRITICAL: User clicked "New"!
+            // User clicked "New"!
             // Force scenes and stomp pedals to empty arrays for a fresh slate
             profileToSave = {
                 name: targetName,
@@ -376,19 +380,27 @@ export const useStore = create<StoreState>((set, get) => ({
 
     loadProfileByName: async (name) => {
         set({ profileLoading: true });
-        const profile = await loadProfile(name);
-        if (profile) {
-            set({
-                stomps: profile.stomps,
-                scenes: profile.scenes,
-                profileName: profile.name,
-                activeSceneId: null,
-                profileDirty: false,
-                profileLoading: false,
-            });
-            await saveLastProfileName(name);
-        } else {
+        try {
+            const sanitizedTarget = sanitizeName(name);
+            const profile = await loadProfile(sanitizedTarget);
+            if (profile) {
+                set({
+                    // Fall back to empty arrays if a brand new empty profile layout is loaded
+                    stomps: profile.stomps || [],
+                    scenes: profile.scenes || [],
+                    profileName: sanitizedTarget,
+                    activeSceneId: null,
+                    profileDirty: false,
+                    profileLoading: false,
+                });
+                await saveLastProfileName(sanitizedTarget);
+            } else {
+                set({ profileLoading: false });
+            }
+        } catch (error) {
+            console.error("Failed to load profile:", error);
             set({ profileLoading: false });
+            alert(error);
         }
     },
 
@@ -414,22 +426,26 @@ export const useStore = create<StoreState>((set, get) => ({
 
             if (availableProfiles.length === 0) {
                 // First run: seed disk with the default profile
-                await saveProfile(DEFAULT_PROFILE);
+                const defaultName = sanitizeName(DEFAULT_PROFILE_NAME);
+                const initialProfile = { ...DEFAULT_PROFILE, name: defaultName };
+
+                await saveProfile(initialProfile);
                 await get().refreshProfileList();
+                await get().loadProfileByName(defaultName);
                 set({ profileLoading: false });
                 return;
             }
 
             const lastProfileName = await loadLastProfileName();
             const target =
-                lastProfileName && availableProfiles.includes(lastProfileName)
-                    ? lastProfileName
+                lastProfileName && availableProfiles.includes(sanitizeName(lastProfileName))
+                    ? sanitizeName(lastProfileName)
                     : availableProfiles[0];
 
             await get().loadProfileByName(target);
         } catch (error) {
             console.error("Critical error in initialization loop:", error);
-            // 💡 Fallback safety valve: Unfreeze app layout even if the file failed to write
+            //  Fallback safety valve: Unfreeze app layout even if the file failed to write
             set({ profileLoading: false });
         }
     },

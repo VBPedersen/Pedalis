@@ -13,10 +13,11 @@ import type { Profile } from "../types";
 const PROFILES_DIR = "profiles"; // relative to $APPDATA
 const LAST_PROFILE_KEY_FILE = "last_profile.json";
 
-function getProfileFileName(profileName: string): string {
+async function getProfilePath(profileName: string): Promise<string> {
     // Sanitize to a safe filename
     const safe = profileName.trim().replace(/[^a-zA-Z0-9 _-]/g, "").replace(/\s+/g, "_");
-    return `${safe || "untitled"}.json`;
+    const fileName = `${safe || "untitled"}.json`;
+    return await join(PROFILES_DIR, fileName);
 }
 
 async function ensureProfilesDir() {
@@ -56,9 +57,7 @@ export async function listProfiles(): Promise<string[]> {
 export async function saveProfile(profile: Profile): Promise<void> {
     await ensureProfilesDir();
     try {
-        // Use join() to cleanly append paths with proper OS separators
-        const file = getProfileFileName(profile.name);
-        const targetPath = await join(PROFILES_DIR, file);
+        const targetPath = await getProfilePath(profile.name);
 
         await writeTextFile(targetPath, JSON.stringify(profile, null, 2), {
             baseDir: BaseDirectory.AppData,
@@ -72,7 +71,7 @@ export async function saveProfile(profile: Profile): Promise<void> {
 
 /** Load a profile by name from disk. */
 export async function loadProfile(name: string): Promise<Profile | null> {
-    const path = getProfileFileName(name);
+    const path = await getProfilePath(name);
     try {
         const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
         if (!fileExists) return null;
@@ -87,7 +86,7 @@ export async function loadProfile(name: string): Promise<Profile | null> {
 
 /** Delete a profile file from disk. */
 export async function deleteProfileFile(name: string): Promise<void> {
-    const path = getProfileFileName(name);
+    const path = await getProfilePath(name);
     try {
         const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
         if (fileExists) {
